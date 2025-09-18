@@ -13,4 +13,3 @@ Este projeto utiliza uma combinação de conjuntos de dados públicos para trein
 | Drowsiness Prediction Dataset | Imagem | Classificação | 9120 | [Acessar no Kaggle](https://www.kaggle.com/datasets/rakibuleceruet/drowsiness-prediction-dataset) |
 | Driver Inattention Detection | Imagem | Detecção de Objetos | 1400 | [Acessar no Kaggle](https://www.kaggle.com/datasets/zeyad1mashhour/driver-inattention-detection-dataset) |
 
-*Observação: Sugere-se criar uma pasta `data/` na raiz do projeto para organizar os arquivos de cada dataset.*
