@@ -132,6 +132,58 @@ Pastas de saída:
 - `data/processed/{train,valid,test}/{Class}`
 - `data/standardized/{train,valid,test}/{Class}`
 
+# Estrutura de Dados e Labels (para a IA)
+
+Nossa IA trabalha com 5 classes globais e um particionamento fixo em três etapas: treino (train), validação (valid) e teste (test). Após a ingestão e padronização, a estrutura de diretórios e as quantidades ficam assim:
+
+Classes globais:
+- SafeDriving: motorista atento/alerta
+- DangerousDriving: ações perigosas (ex.: falar ao telefone, digitar)
+- Distracted: distrações diversas (ex.: olhar para os lados, gestos)
+- Object: objetos/itens (ex.: bebida, celular) — quando etiquetados como tal
+- SleepyDriving: sonolência (yawn/microsleep)
+
+Estrutura de pastas utilizada pelo treinamento:
+- `data/processed/{train,valid,test}/{Class}` — dados brutos consolidados (formato original)
+- `data/standardized/{train,valid,test}/{Class}` — dados padronizados (ex.: 224x224, modo fit, jpg)
+
+Contagens por etapa (planejadas na padronização recente):
+
+Train (treino):
+- DangerousDriving: 10.897
+- Distracted: 6.250
+- Object: 1.614
+- SafeDriving: 38.320
+- SleepyDriving: 14.479
+- Total (train): 71.560
+
+Valid (validação):
+- DangerousDriving: 2.146
+- Distracted: 1.233
+- Object: 329
+- SafeDriving: 8.046
+- SleepyDriving: 3.046
+- Total (valid): 14.800
+
+Test (teste):
+- DangerousDriving: 1.836
+- Distracted: 1.132
+- Object: 296
+- SafeDriving: 7.659
+- SleepyDriving: 2.937
+- Total (test): 13.860
+
+Total geral (todas as etapas): 100.220
+
+Observações importantes:
+- As contagens acima refletem a última execução em dry‑run da padronização (224, fit, jpg) e podem variar ligeiramente caso os conjuntos de origem sejam atualizados, filtros mudem ou o split 70/15/15 seja refeito com outra semente.
+- O mapeamento de classes vem dos scripts de ingestão:
+  - raw/1: `safe_driving`,`turning` → SafeDriving; `talking_phone`,`texting_phone` → DangerousDriving
+  - raw/2: `c0` → SafeDriving; `c1..c4` → DangerousDriving; `c5,c7,c8,c9` → Distracted; `c6` → Object
+  - raw/3: `Active Subjects` → SafeDriving; `Fatigue Subjects` → SleepyDriving
+  - raw/4: `alert` → SafeDriving; `yawning`/`microsleep` → SleepyDriving
+  - raw/5: respeita os splits fornecidos pelo dataset, mapeando IDs 0..5 para as 5 classes globais
+
 
 # Deep-Learning-para-visao-computacional-driver-drowsines-prediction-DDP-
 Projeto de Deep Learning para detecção de sonolência em motoristas (Driver Drowsiness Prediction) em tempo real, utilizando Visão Computacional. Trabalho da disciplina de Redes Neurais e Aprendizado Profundo.
