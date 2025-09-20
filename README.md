@@ -196,6 +196,6 @@ Este projeto utiliza uma combinação de conjuntos de dados públicos para trein
 | :--- | :---: | :---: | :---: | :--- |
 | Multi-Class Driver Behavior | Imagem | Classificação | 7276 | [Acessar no Kaggle](https://www.kaggle.com/datasets/arafatsahinafridi/multi-class-driver-behavior-image-dataset) |
 | State Farm Distracted Driver Detection | Imagem | Classificação | 22400 | [Acessar no Kaggle](https://www.kaggle.com/datasets/rightway11/state-farm-distracted-driver-detection/) |
-| Drowsiness Detection Computer Vision Model | Imagem | Detecção de Objetos | 526 | [Acessar no Kaggle](https://www.kaggle.com/datasets/matjazmuc/frame-level-driver-drowsiness-detection-fl3d) |
+| Frame Level Driver Drowsiness Detection (FL3D) | Imagem | Detecção de Objetos e classificação | 53400 | [Acessar no Kaggle](https://www.kaggle.com/datasets/matjazmuc/frame-level-driver-drowsiness-detection-fl3d) |
 | Drowsiness Prediction Dataset | Imagem | Classificação | 9120 | [Acessar no Kaggle](https://www.kaggle.com/datasets/rakibuleceruet/drowsiness-prediction-dataset) |
-| Driver Inattention Detection | Imagem | Detecção de Objetos | 1400 | [Acessar no Kaggle](https://www.kaggle.com/datasets/zeyad1mashhour/driver-inattention-detection-dataset) |
+| Driver Inattention Detection Dataset | Imagem | Detecção de Objetos | 14900 | [Acessar no Kaggle](https://www.kaggle.com/datasets/zeyad1mashhour/driver-inattention-detection-dataset) |
