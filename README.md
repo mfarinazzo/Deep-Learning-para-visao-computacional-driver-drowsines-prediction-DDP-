@@ -1,6 +1,6 @@
 # Automação Dataset de Direção
 
-Com estes scripts, automatizamos quase todo o fluxo de dados para construir um banco unificado e normalizado de comportamentos de direção (múltiplos datasets do Kaggle), pronto para treino.
+Com estes scripts, automatizamos quase todo o fluxo de dados para construir um banco unificado e normalizado de comportamentos de direção (múltiplos datasets do Kaggle), pronto para treino!
 
 ## Índice
 
