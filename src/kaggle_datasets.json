@@ -1,0 +1,38 @@
+{
+  "config": {
+    "kaggleConfigDir": ".kaggle"
+  },
+  "datasets": [
+    {
+      "id": "arafatsahinafridi/multi-class-driver-behavior-image-dataset",
+      "path": "raw/1",
+      "unzip": true,
+      "enabled": true
+    },
+    {
+      "id": "rightway11/state-farm-distracted-driver-detection",
+      "path": "raw/2",
+      "unzip": true,
+      "enabled": true
+    },
+    {
+      "id": "matjazmuc/frame-level-driver-drowsiness-detection-fl3d",
+      "path": "raw/3",
+      "unzip": true,
+      "enabled": true
+    },
+    {
+      "id": "rakibuleceruet/drowsiness-prediction-dataset",
+      "path": "raw/4",
+      "unzip": true,
+      "enabled": true
+    },
+    {
+      "id": "zeyad1mashhour/driver-inattention-detection-dataset",
+      "path": "raw/5",
+      "unzip": true,
+      "enabled": true
+    }
+  ],
+  "competitions": []
+}
