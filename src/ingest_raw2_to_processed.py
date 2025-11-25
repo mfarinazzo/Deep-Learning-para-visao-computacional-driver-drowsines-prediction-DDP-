@@ -59,7 +59,11 @@ def copy_files(files: Iterable[Path], dest_dir: Path, dry_run: bool = False, ski
     ensure_dir(dest_dir)
     count = 0
     for src in files:
-        dst = dest_dir / src.name if skip_existing else _unique_destination(dest_dir, src.name)
+        # Prefixo raw2_
+        new_name = f"raw2_{src.name}"
+        
+        dst = dest_dir / new_name if skip_existing else _unique_destination(dest_dir, new_name)
+        
         if skip_existing and dst.exists():
             continue
         if not dry_run:
@@ -125,8 +129,9 @@ def run(workspace_root: Path, seed: int = 42, dry_run: bool = False, purge_targe
     raw_train_dir = raw_imgs_root / "train"
 
     processed_root = workspace_root / "data" / "processed"
-    if not processed_root.exists():
-        raise FileNotFoundError(f"Processed root not found at: {processed_root}")
+    
+    # ALTERAÇÃO: Cria pasta se não existir
+    processed_root.mkdir(parents=True, exist_ok=True)
 
     grouped = collect_raw2_grouped(raw_train_dir)
     if not grouped:

@@ -29,18 +29,19 @@ def run_step(cmd: list[str], title: str) -> None:
 
 def delete_dir(path: Path) -> None:
     if path.exists():
+        print(f"Deleting directory: {path}")
         shutil.rmtree(path, ignore_errors=True)
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description="Run end-to-end dataset pipeline: download -> ingest -> verify -> standardize")
+    ap = argparse.ArgumentParser(description="Run end-to-end dataset pipeline")
     ap.add_argument("--skip-download", action="store_true", help="Skip Kaggle downloads")
-    ap.add_argument("--download-mode", choices=["cli", "api"], default="api", help="Downloader mode: cli or api (api shows progress)")
+    ap.add_argument("--download-mode", choices=["cli", "api"], default="api", help="Downloader mode")
     ap.add_argument("--rebuild", action="store_true", help="Delete data/processed and data/standardized before ingest")
-    ap.add_argument("--seed", type=int, default=42, help="Seed for 70/15/15 splits on raws 1-4")
-    ap.add_argument("--std-size", type=int, default=224, help="Standardized image size (square)")
+    ap.add_argument("--seed", type=int, default=42, help="Seed for splits")
+    ap.add_argument("--std-size", type=int, default=224, help="Standardized image size")
     ap.add_argument("--std-mode", choices=["fit", "fill", "stretch"], default="fit", help="Resize strategy")
-    ap.add_argument("--std-convert", choices=["jpg", "png", "keep"], default="jpg", help="Output format for standardized set")
+    ap.add_argument("--std-convert", choices=["jpg", "png", "keep"], default="jpg", help="Output format")
     args = ap.parse_args(argv)
 
     if not args.skip_download:
@@ -50,12 +51,14 @@ def main(argv: list[str] | None = None) -> int:
         delete_dir(ROOT / "data" / "processed")
         delete_dir(ROOT / "data" / "standardized")
 
-    # Ingest raws 1..4 (70/15/15) and raw/5 (provided splits)
+    # Ingest raws 1..5
     run_step([PY, str(ROOT / "src" / "ingest_raw1_to_processed.py"), "--seed", str(args.seed)], title="Ingest raw/1 -> data/processed")
     run_step([PY, str(ROOT / "src" / "ingest_raw2_to_processed.py"), "--seed", str(args.seed)], title="Ingest raw/2 -> data/processed")
     run_step([PY, str(ROOT / "src" / "ingest_raw3_to_processed.py"), "--seed", str(args.seed)], title="Ingest raw/3 -> data/processed")
     run_step([PY, str(ROOT / "src" / "ingest_raw4_to_processed.py"), "--seed", str(args.seed)], title="Ingest raw/4 -> data/processed")
-    run_step([PY, str(ROOT / "src" / "ingest_raw5_to_processed.py")], title="Ingest raw/5 -> data/processed")
+    
+    # CORREÇÃO: Adicionado --apply para o raw5 sair do modo dry-run
+    run_step([PY, str(ROOT / "src" / "ingest_raw5_to_processed.py"), "--apply"], title="Ingest raw/5 -> data/processed")
 
     # Verify totals
     run_step([PY, str(ROOT / "src" / "verify_processed_totals.py")], title="Verify processed totals")
@@ -64,14 +67,17 @@ def main(argv: list[str] | None = None) -> int:
     std_args = [
         PY,
         str(ROOT / "src" / "standardize_dataset.py"),
-        "--size",
-        str(args.std_size),
-        "--mode",
-        args.std_mode,
+        "--size", str(args.std_size),
+        "--mode", args.std_mode,
     ]
     if args.std_convert != "keep":
         std_args += ["--convert", args.std_convert]
     run_step(std_args, title="Standardize dataset -> data/standardized")
+
+    # Cleanup processed (Limpeza do lixo)
+    print("\n=== Cleaning up intermediate data ===")
+    delete_dir(ROOT / "data" / "processed")
+    print("Deleted data/processed to save space. Only data/standardized and raw/ remain.")
 
     print("\nPipeline completed successfully.")
     return 0

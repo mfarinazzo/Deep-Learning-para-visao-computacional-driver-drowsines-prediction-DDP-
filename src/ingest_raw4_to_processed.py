@@ -124,8 +124,11 @@ def copy_files(items: List[Path], dst_dir: Path) -> Tuple[int, int]:
         if not src.exists():
             missing += 1
             continue
-        # Keep the original filename; rely on collision-safe naming
-        dst = _unique_destination(dst_dir, src.name)
+        
+        # ALTERAÇÃO: Prefixo raw4_
+        new_name = f"raw4_{src.name}"
+        
+        dst = _unique_destination(dst_dir, new_name)
         shutil.copy2(src, dst)
         copied += 1
     return copied, missing

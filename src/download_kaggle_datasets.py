@@ -7,12 +7,29 @@ import shutil
 import subprocess
 import sys
 import zipfile
+import time
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Callable, Any
 
 
+# ALTERAÇÃO: ROOT agora aponta para a raiz do projeto (parents[1]), não para src
 ROOT = Path(__file__).resolve().parents[1]
-CFG_PATH = ROOT / "kaggle_datasets.json"
+
+
+def retry_operation(func: Callable, *args, retries: int = 5, delay: float = 2.0, **kwargs) -> Any:
+    """Executa uma função com tentativas (retries) e backoff exponencial."""
+    last_exception = None
+    for i in range(retries):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            last_exception = e
+            wait = delay * (2 ** i)
+            print(f"\n[Aviso] Falha na tentativa {i+1}/{retries}. Erro: {e}")
+            print(f"Aguardando {wait:.1f}s para tentar novamente...")
+            time.sleep(wait)
+    print("\n[Erro] Todas as tentativas falharam.")
+    raise last_exception
 
 
 def find_kaggle_json(config_dir_hint: Optional[Path] = None) -> Optional[Path]:
@@ -30,17 +47,11 @@ def find_kaggle_json(config_dir_hint: Optional[Path] = None) -> Optional[Path]:
 
 
 def ensure_kaggle_cli() -> str | None:
-    """Return the command prefix to invoke Kaggle CLI, or None if not available.
-
-    Tries 'kaggle' first, then falls back to 'python -m kaggle'.
-    """
-    # Try direct 'kaggle'
     try:
         subprocess.run(["kaggle", "--version"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         return "kaggle"
     except Exception:
         pass
-    # Fallback: python -m kaggle
     try:
         subprocess.run([sys.executable, "-m", "kaggle", "--version"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         return f"{sys.executable} -m kaggle"
@@ -55,26 +66,33 @@ def set_kaggle_env(kaggle_json: Path) -> None:
 def run_kaggle_cmd(args: List[str], cwd: Optional[Path] = None, runner: Optional[str] = None) -> None:
     cmd: List[str]
     if runner and runner != "kaggle":
-        # runner like: "<python> -m kaggle"
         parts = runner.split()
         cmd = [*parts, *args]
     else:
         cmd = ["kaggle", *args]
-    # Stream output in real time so users see progress
-    proc = subprocess.Popen(cmd, cwd=str(cwd) if cwd else None, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-    assert proc.stdout is not None
-    for line in proc.stdout:
-        print(line, end="")
-    ret = proc.wait()
-    if ret != 0:
-        raise RuntimeError(f"Kaggle command failed: {' '.join(cmd)} (exit {ret})")
+    
+    def _execute():
+        # Stream output in real time
+        proc = subprocess.Popen(cmd, cwd=str(cwd) if cwd else None, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        assert proc.stdout is not None
+        for line in proc.stdout:
+            print(line, end="")
+        ret = proc.wait()
+        if ret != 0:
+            raise RuntimeError(f"Kaggle command failed (exit {ret})")
+
+    retry_operation(_execute)
 
 
 def unzip_all_in_dir(zip_dir: Path, dest: Path) -> None:
     dest.mkdir(parents=True, exist_ok=True)
     for z in zip_dir.glob("*.zip"):
-        with zipfile.ZipFile(z, 'r') as zip_ref:
-            zip_ref.extractall(dest)
+        print(f"Extraindo {z.name}...")
+        try:
+            with zipfile.ZipFile(z, 'r') as zip_ref:
+                zip_ref.extractall(dest)
+        except zipfile.BadZipFile:
+            print(f"[Erro] Arquivo zip corrompido: {z}")
 
 
 def download_datasets_cli(cfg: Dict, apply: bool, runner: Optional[str]) -> None:
@@ -83,6 +101,7 @@ def download_datasets_cli(cfg: Dict, apply: bool, runner: Optional[str]) -> None
         if not ds.get("enabled", False):
             continue
         ds_id = ds["id"]
+        # Caminho relativo ao ROOT do projeto
         path = ROOT / ds.get("path", "raw")
         unzip = bool(ds.get("unzip", True))
         path.mkdir(parents=True, exist_ok=True)
@@ -92,6 +111,7 @@ def download_datasets_cli(cfg: Dict, apply: bool, runner: Optional[str]) -> None
         run_kaggle_cmd(["datasets", "download", "-d", ds_id, "-p", str(path), "--force"], runner=runner)
         if unzip:
             unzip_all_in_dir(path, path)
+
 
 def download_competitions_cli(cfg: Dict, apply: bool, runner: Optional[str]) -> None:
     comps = cfg.get("competitions", [])
@@ -115,9 +135,11 @@ def download_datasets_api(cfg: Dict, apply: bool) -> None:
         from kaggle.api.kaggle_api_extended import KaggleApi
     except Exception as e:
         raise RuntimeError("Kaggle API is not available; ensure 'kaggle' package is installed.") from e
+    
     api = KaggleApi()
     api.authenticate()
     datasets = cfg.get("datasets", [])
+    
     for ds in datasets:
         if not ds.get("enabled", False):
             continue
@@ -128,8 +150,15 @@ def download_datasets_api(cfg: Dict, apply: bool) -> None:
         print(f"Dataset (API): {ds_id} -> {path}")
         if not apply:
             continue
-        # API shows tqdm progress when quiet=False
-        api.dataset_download_files(ds_id, path=str(path), unzip=unzip, quiet=False, force=True)
+        
+        retry_operation(
+            api.dataset_download_files, 
+            ds_id, 
+            path=str(path), 
+            unzip=unzip, 
+            quiet=False, 
+            force=True
+        )
 
 
 def download_competitions_api(cfg: Dict, apply: bool) -> None:
@@ -137,6 +166,7 @@ def download_competitions_api(cfg: Dict, apply: bool) -> None:
         from kaggle.api.kaggle_api_extended import KaggleApi
     except Exception as e:
         raise RuntimeError("Kaggle API is not available; ensure 'kaggle' package is installed.") from e
+    
     api = KaggleApi()
     api.authenticate()
     comps = cfg.get("competitions", [])
@@ -150,16 +180,27 @@ def download_competitions_api(cfg: Dict, apply: bool) -> None:
         print(f"Competition (API): {cp_id} -> {path}")
         if not apply:
             continue
-        api.competition_download_files(cp_id, path=str(path), quiet=False, force=True)
+            
+        retry_operation(
+            api.competition_download_files, 
+            cp_id, 
+            path=str(path), 
+            quiet=False, 
+            force=True
+        )
         if unzip:
             unzip_all_in_dir(path, path)
 
 
 def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description="Download datasets/competitions from Kaggle based on kaggle_datasets.json")
-    ap.add_argument("--config", type=Path, default=CFG_PATH, help="Path to kaggle_datasets.json")
+    
+    # ALTERAÇÃO: O padrão agora busca o json na mesma pasta deste script (src/), e não na CWD
+    default_cfg = Path(__file__).resolve().parent / "kaggle_datasets.json"
+    
+    ap.add_argument("--config", type=Path, default=default_cfg, help=f"Path to kaggle_datasets.json (default: {default_cfg})")
     ap.add_argument("--apply", action="store_true", help="Actually download files (default is dry-run)")
-    ap.add_argument("--mode", choices=["cli", "api"], default="cli", help="Downloader mode: 'cli' streams kaggle CLI output; 'api' uses KaggleApi with tqdm progress")
+    ap.add_argument("--mode", choices=["cli", "api"], default="cli", help="Downloader mode")
     args = ap.parse_args(argv)
 
     if not args.config.exists():
@@ -183,7 +224,6 @@ def main(argv: Optional[List[str]] = None) -> int:
     print(f"Using KAGGLE_CONFIG_DIR={kjson.parent}")
 
     if args.mode == "api":
-        # KaggleApi path
         try:
             download_datasets_api(cfg, apply=args.apply)
             download_competitions_api(cfg, apply=args.apply)
@@ -191,7 +231,6 @@ def main(argv: Optional[List[str]] = None) -> int:
             print(f"API mode failed: {e}")
             return 2
     else:
-        # CLI path
         runner = ensure_kaggle_cli()
         if not runner:
             print("Kaggle CLI not found. Install with: pip install kaggle")
