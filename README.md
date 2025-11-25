@@ -108,6 +108,37 @@ Observações:
 - Downloads grandes podem demorar; se interromper, reexecute (o script força/retoma operações).
 - Execute os comandos a partir da raiz do projeto (PowerShell no Windows).
 
+
+## Scripts de Modelagem e Treinamento
+
+Além do pipeline de dados, o projeto inclui scripts para amostragem e treinamento de modelos de classificação com YOLOv8:
+
+### `src/modeling/create_sample.py`
+Gera um subconjunto amostral dos dados padronizados para experimentação rápida ou debug. Exemplo:
+
+```bash
+python src/modeling/create_sample.py --src data/standardized --dst data/sample --n 50
+```
+Cria até 50 imagens por classe em cada split (train/val/test) em `data/sample/`.
+
+### `src/modeling/train_yolo.py`
+Treina um classificador YOLOv8 (Ultralytics) usando os dados amostrados ou completos. Exemplo:
+
+```bash
+python src/modeling/train_yolo.py --data data/sample --epochs 3 --imgsz 224 --batch 8 --project outputs/training_logs
+```
+Parâmetros:
+- `--data`: caminho para os dados (ex: `data/sample` ou `data/standardized`)
+- `--epochs`: número de épocas
+- `--imgsz`: tamanho das imagens (ex: 224)
+- `--batch`: tamanho do batch
+- `--project`: pasta de saída dos logs/resultados
+- `--device`: cpu, mps ou cuda (opcional)
+
+Os resultados do treinamento ficam em `outputs/training_logs/yolo_driver_drowsiness/`.
+
+---
+
 ## Explicação dos Arquivos
 
 Explicação de cada arquivo em `src/` (ordem lógica):
@@ -127,10 +158,19 @@ Explicação de cada arquivo em `src/` (ordem lógica):
 | `verify_raw5_ingestion.py` | Verificador específico do raw/5 (manifest vs. anotações). |
 | `__init__.py` | Pacote Python. |
 
+#### Modelagem
+| Arquivo | Descrição |
+|---------|-----------|
+| `modeling/create_sample.py` | Cria amostras pequenas dos dados padronizados para debug/teste rápido. |
+| `modeling/train_yolo.py` | Treinamento de classificador YOLOv8 (Ultralytics) com os dados amostrados ou completos. |
+
+
 Pastas de saída:
 - `raw/` (downloads)
 - `data/processed/{train,valid,test}/{Class}`
 - `data/standardized/{train,valid,test}/{Class}`
+- `data/sample/{train,val,test}/{Class}` (amostras)
+- `outputs/training_logs/yolo_driver_drowsiness/` (resultados de treino)
 
 # Estrutura de Dados e Labels (para a IA)
 
